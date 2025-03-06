@@ -1,0 +1,55 @@
+version: '3.8'
+services:
+  postgres:
+    image: postgres:15
+    container_name: timeforge-postgres
+    environment:
+      POSTGRES_USER: tfuser
+      POSTGRES_PASSWORD: tf25pass
+      POSTGRES_DB: tfdb
+    ports:
+      - '5433:5432'  # 5433
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: timeforge-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@timeforge.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+    ports:
+      - '5051:80'    # 5051
+    depends_on:
+      - postgres
+
+  backend:
+    build:
+      context: ./back
+      dockerfile: Dockerfile
+    container_name: timeforge-backend
+    environment:
+      - DATABASE_URL="postgresql://tfuser:tf25pass@localhost:5433/tfdb?schema=public"
+      - PORT=3003
+      - JWT_SECRET=secret_key
+    ports:
+      - '3003:3003'
+    depends_on:
+      - postgres
+    volumes:
+      - ./back:/app
+
+  frontend:
+    build:
+      context: ./front
+      dockerfile: Dockerfile
+    container_name: timeforge-frontend
+    environment:
+      - API_URL=http://backend:3003
+    ports:
+      - '3000:3000'
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:

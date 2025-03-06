@@ -1,0 +1,40 @@
+@import 'variables'; // Подключаем переменные
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: $font-family;
+    background-color: $background-dark;
+    color: $text-light;
+}
+
+.container {
+    max-width: $container-width;
+    margin: 0 auto;
+    padding: $spacing-lg;
+}
+
+.button {
+    padding: $spacing-sm $spacing-lg;
+    background-color: $primary-color;
+    color: $text-light;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+
+    &:hover {
+        background-color: $primary-hover;
+    }
+}
+
+.metallic {
+    background: linear-gradient(45deg, $metallic-start, $metallic-end);
+    color: $text-light;
+    padding: 5px $spacing-md;
+    border-radius: 3px;
+}
