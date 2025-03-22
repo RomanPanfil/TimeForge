@@ -9,8 +9,8 @@ export class FriendsController {
 
     @Post('invite')
     async sendFriendRequest(@Request() req, @Body('email') email: string) {
-        console.log('req.user:', req.user); // Логируем для отладки
-        const senderId = req.user?.userId; // Изменили id на userId
+        console.log('req.user:', req.user);
+        const senderId = req.user?.userId;
         if (!senderId) {
             throw new UnauthorizedException('Пользователь не аутентифицирован');
         }
@@ -19,12 +19,12 @@ export class FriendsController {
 
     @Get('requests')
     async getFriendRequests(@Request() req) {
-        return this.friendsService.getFriendRequests(req.user.userId); // Изменили id на userId
+        return this.friendsService.getFriendRequests(req.user.userId);
     }
 
     @Get()
     async getFriends(@Request() req) {
-        return this.friendsService.getFriends(req.user.userId); // Изменили id на userId
+        return this.friendsService.getFriends(req.user.userId);
     }
 
     @Patch('respond/:id')
@@ -33,6 +33,11 @@ export class FriendsController {
         @Param('id', ParseIntPipe) requestId: number,
         @Body('accept') accept: boolean,
     ) {
-        return this.friendsService.respondToFriendRequest(req.user.userId, requestId, accept); // Изменили id на userId
+        return this.friendsService.respondToFriendRequest(req.user.userId, requestId, accept);
+    }
+
+    @Post('confirm')
+    async confirmInvitation(@Request() req, @Body('token') token: string) {
+        return this.friendsService.confirmInvitation(token, req.user.userId);
     }
 }

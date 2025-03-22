@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Приглашение в друзья</title>
+</head>
+<body style="font-family: Arial, sans-serif; color: #333;">
+<h2 style="color: #007bff;">Приглашение в друзья в TimeForge</h2>
+<p>Здравствуйте, {{recipientName}},</p>
+<p>{{senderName}} приглашает вас стать друзьями в TimeForge.</p>
+{{#if inviteUrl}}
+  <p>Зарегистрируйтесь и подтвердите дружбу по ссылке:</p>
+  <p><a href="{{inviteUrl}}" style="color: #007bff; text-decoration: none;">{{inviteUrl}}</a></p>
+{{else}}
+  <p>Перейдите в приложение, чтобы принять или отклонить запрос:</p>
+  <p><a href="{{inviteUrl}}" style="color: #007bff; text-decoration: none;">{{inviteUrl}}</a></p>
+{{/if}}
+<p>С уважением,<br>Команда TimeForge</p>
+</body>
+</html>

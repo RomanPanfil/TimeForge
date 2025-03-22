@@ -63,20 +63,29 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '~/stores/auth';
 
 const isLogin = ref(true);
 const email = ref('');
 const password = ref('');
 const name = ref('');
-const avatar = ref(null); // Для хранения файла
+const avatar = ref(null);
 const birthday = ref('');
+const inviteToken = ref(''); // Для хранения токена из URL
 const router = useRouter();
+const route = useRoute();
 const authStore = useAuthStore();
 
 authStore.initialize();
+
+onMounted(() => {
+    inviteToken.value = route.query.invite || ''; // Извлекаем токен из URL
+    if (inviteToken.value && !isLogin.value) {
+        console.log('Invite token detected:', inviteToken.value);
+    }
+});
 
 const toggleMode = () => {
     isLogin.value = !isLogin.value;
@@ -88,19 +97,26 @@ const toggleMode = () => {
 };
 
 const handleFileChange = (event) => {
-    avatar.value = event.target.files[0]; // Получаем первый выбранный файл
+    avatar.value = event.target.files[0];
 };
 
 const handleSubmit = async () => {
     try {
         if (isLogin.value) {
             await authStore.login(email.value, password.value);
+            router.push('/');
         } else {
             await authStore.register(email.value, password.value, name.value, avatar.value, birthday.value);
+            if (inviteToken.value) {
+                await authStore.confirmInvitation(inviteToken.value);
+                alert('Регистрация выполнена, и дружба подтверждена!');
+            } else {
+                alert('Регистрация выполнена!');
+            }
+            router.push('/');
         }
-        router.push('/');
     } catch (error) {
-        alert('Что-то пошло не так. Проверьте данные.');
+        alert('Что-то пошло не так. Проверьте данные: ' + error.message);
     }
 };
 </script>

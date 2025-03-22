@@ -527,7 +527,8 @@ export class TasksService {
         const project = await this.prisma.project.findUnique({ where: { id: projectId } });
         if (!assignee || !project) return;
 
-        const taskUrl = `http://localhost:3000/projects/${projectId}/tasks/${taskId}`; // Замените на реальный домен в продакшене
+        const baseUrl = process.env.BASE_URL || 'http://localhost:3000'; // Берем из .env или используем значение по умолчанию
+        const taskUrl = `${baseUrl}/projects/${projectId}/tasks/${taskId}`;
 
         try {
             await this.mailerService.sendMail({
@@ -545,6 +546,7 @@ export class TasksService {
             console.log(`Email sent to ${assignee.email} for task ${taskId}`);
         } catch (error) {
             console.error('Ошибка при отправке email:', error);
+            throw error; // Рекомендую пробросить ошибку дальше для обработки на уровне вызова
         }
     }
 }

@@ -23,6 +23,7 @@ model User {
   TimeEntry              TimeEntry[]
   sentFriendRequests     Friendship[] @relation("SentFriendRequests")
   receivedFriendRequests Friendship[] @relation("ReceivedFriendRequests")
+  Invitation             Invitation[]
 }
 
 model Friendship {
@@ -35,6 +36,16 @@ model Friendship {
   receiver   User     @relation("ReceivedFriendRequests", fields: [receiverId], references: [id])
 
   @@unique([senderId, receiverId])
+}
+
+model Invitation {
+  id        Int      @id @default(autoincrement())
+  senderId  Int
+  email     String
+  token     String   @unique // Уникальный токен для ссылки
+  status    String   @default("pending") // "pending", "accepted", "rejected"
+  createdAt DateTime @default(now())
+  sender    User     @relation(fields: [senderId], references: [id])
 }
 
 model Project {

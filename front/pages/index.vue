@@ -3,7 +3,7 @@
         <h2>Добро пожаловать в {{ appName }}</h2>
         <p>Управляйте задачами и временем вашей команды с TimeForge!</p>
         <FriendInvite v-if="authStore.isAuthenticated" />
-
+        <FriendsList v-if="authStore.isAuthenticated" />
         <div v-if="authStore.isAuthenticated" class="projects-section">
             <h3>Ваши проекты</h3>
 

@@ -14,6 +14,7 @@ export const useAuthStore = defineStore('auth', {
         tasks: {},
         users: [],
         assignedTasks: { data: [], total: 0, page: 1, totalPages: 0, limit: 5, filter: '' },
+        friends: [],
     }),
     actions: {
         async login(email, password) {
@@ -32,9 +33,37 @@ export const useAuthStore = defineStore('auth', {
                 await this.fetchProjects();
                 await this.fetchUsers();
                 await this.fetchAssignedTasks();
+                await this.fetchFriends();
             } catch (error) {
                 console.error('Login error:', error);
                 throw error;
+            }
+        },
+        async confirmInvitation(token) {
+            const config = useRuntimeConfig();
+            try {
+                await $fetch(`${config.public.apiUrl}/friends/confirm`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${this.token}` },
+                    body: { token },
+                });
+                await this.fetchFriends();
+            } catch (error) {
+                console.error('Confirm invitation error:', error);
+                throw error;
+            }
+        },
+        async fetchFriends() {
+            const config = useRuntimeConfig();
+            try {
+                const friends = await $fetch(`${config.public.apiUrl}/friends`, {
+                    method: 'GET',
+                    headers: { Authorization: `Bearer ${this.token}` },
+                });
+                this.friends = friends;
+            } catch (error) {
+                console.error('Fetch friends error:', error);
+                this.friends = [];
             }
         },
         async register(email, password, name, avatarFile, birthday) {
@@ -60,6 +89,7 @@ export const useAuthStore = defineStore('auth', {
                 await this.fetchProjects();
                 await this.fetchUsers();
                 await this.fetchAssignedTasks();
+                await this.fetchFriends();
             } catch (error) {
                 console.error('Register error:', error);
                 throw error;

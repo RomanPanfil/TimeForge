@@ -1,6 +1,7 @@
 import { Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma.service';
 import { MailerService } from '@nestjs-modules/mailer';
+import { v4 as uuidv4 } from 'uuid';
 
 @Injectable()
 export class FriendsService {
@@ -10,7 +11,7 @@ export class FriendsService {
     ) {}
 
     async sendFriendRequest(senderId: number, receiverEmail: string) {
-        console.log('senderId:', senderId, 'receiverEmail:', receiverEmail); // Логирование входных данных
+        console.log('senderId:', senderId, 'receiverEmail:', receiverEmail);
 
         if (!senderId || typeof senderId !== 'number') {
             throw new BadRequestException('Неверный senderId');
@@ -20,33 +21,78 @@ export class FriendsService {
         }
 
         const sender = await this.prisma.user.findUnique({ where: { id: senderId } });
+        if (!sender) {
+            throw new BadRequestException('Отправитель не найден');
+        }
+
         const receiver = await this.prisma.user.findUnique({ where: { email: receiverEmail } });
 
-        if (!sender || !receiver) {
-            throw new BadRequestException('Пользователь не найден');
+        if (receiver) {
+            if (senderId === receiver.id) {
+                throw new BadRequestException('Нельзя отправить запрос самому себе');
+            }
+
+            const existingRequest = await this.prisma.friendship.findUnique({
+                where: {
+                    senderId_receiverId: { senderId, receiverId: receiver.id },
+                },
+            });
+            if (existingRequest) {
+                throw new BadRequestException('Запрос уже отправлен или дружба установлена');
+            }
+
+            const friendship = await this.prisma.friendship.create({
+                data: {
+                    senderId,
+                    receiverId: receiver.id,
+                    status: 'pending',
+                },
+            });
+
+            await this.sendInvitationEmail(sender, receiver.email, null);
+            return friendship;
+        } else {
+            const token = uuidv4();
+            const invitation = await this.prisma.invitation.create({
+                data: {
+                    senderId,
+                    email: receiverEmail,
+                    token,
+                    status: 'pending',
+                },
+            });
+
+            await this.sendInvitationEmail(sender, receiverEmail, token);
+            return invitation;
         }
-        if (senderId === receiver.id) {
-            throw new BadRequestException('Нельзя отправить запрос самому себе');
+    }
+
+    async confirmInvitation(token: string, userId: number) {
+        const invitation = await this.prisma.invitation.findUnique({ where: { token } });
+        if (!invitation || invitation.status !== 'pending') {
+            throw new BadRequestException('Приглашение не найдено или уже обработано');
         }
 
-        const existingRequest = await this.prisma.friendship.findUnique({
-            where: {
-                senderId_receiverId: { senderId, receiverId: receiver.id },
-            },
-        });
-        if (existingRequest) {
-            throw new BadRequestException('Запрос уже отправлен или дружба установлена');
+        const sender = await this.prisma.user.findUnique({ where: { id: invitation.senderId } });
+        if (!sender) {
+            throw new BadRequestException('Отправитель не найден');
         }
 
+        // Создаём запрос на дружбу со статусом pending
         const friendship = await this.prisma.friendship.create({
             data: {
-                senderId,
-                receiverId: receiver.id,
-                status: 'pending',
+                senderId: invitation.senderId,
+                receiverId: userId,
+                status: 'pending', // Изменили с 'accepted' на 'pending'
             },
         });
 
-        await this.sendInvitationEmail(sender, receiver);
+        // Обновляем статус приглашения
+        await this.prisma.invitation.update({
+            where: { id: invitation.id },
+            data: { status: 'processed' }, // Новый статус, чтобы отметить, что приглашение использовано
+        });
+
         return friendship;
     }
 
@@ -66,8 +112,8 @@ export class FriendsService {
                 ],
             },
             include: {
-                sender: { select: { id: true, email: true, name: true } },
-                receiver: { select: { id: true, email: true, name: true } },
+                sender: { select: { id: true, email: true, name: true, avatar: true } },
+                receiver: { select: { id: true, email: true, name: true,  avatar: true } },
             },
         });
 
@@ -88,16 +134,25 @@ export class FriendsService {
         });
     }
 
-    private async sendInvitationEmail(sender: any, receiver: any) {
+    private async sendInvitationEmail(sender: any, receiverEmail: string, token: string | null) {
+        const baseUrl = process.env.BASE_URL; // Значение по умолчанию
+        const inviteUrl = token ? `${baseUrl}/login?invite=${token}` : `${baseUrl}/friends/requests`;
+
         try {
             await this.mailerService.sendMail({
-                to: receiver.email,
+                to: receiverEmail,
                 subject: `Приглашение в друзья от ${sender.name || sender.email}`,
-                text: `Здравствуйте, ${receiver.name || receiver.email},\n\n${sender.name || sender.email} хочет добавить вас в друзья в TimeForge.\nПерейдите в приложение, чтобы принять или отклонить запрос.\n\nС уважением,\nTimeForge`,
+                template: 'invitation',
+                context: {
+                    recipientName: receiverEmail,
+                    senderName: sender.name || sender.email,
+                    inviteUrl: inviteUrl,
+                },
             });
-            console.log(`Invitation email sent to ${receiver.email}`);
+            console.log(`Invitation email sent to ${receiverEmail}`);
         } catch (error) {
             console.error('Ошибка при отправке приглашения:', error);
+            throw error;
         }
     }
 }
